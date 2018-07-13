@@ -86,6 +86,7 @@ string ParticleFilter::getAssociations(Particle best)
     s = s.substr(0, s.length()-1);  // get rid of the trailing space
     return s;
 }
+
 string ParticleFilter::getSenseX(Particle best)
 {
 	vector<double> v = best.sense_x;
@@ -95,6 +96,7 @@ string ParticleFilter::getSenseX(Particle best)
     s = s.substr(0, s.length()-1);  // get rid of the trailing space
     return s;
 }
+
 string ParticleFilter::getSenseY(Particle best)
 {
 	vector<double> v = best.sense_y;

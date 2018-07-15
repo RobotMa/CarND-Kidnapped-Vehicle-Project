@@ -26,7 +26,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
     default_random_engine gen;
 
-    num_particles = 10;
+    num_particles = 51;
     normal_distribution<double> dist_x(x, std[0]);
     normal_distribution<double> dist_y(y, std[1]);
     normal_distribution<double> dist_theta(theta, std[2]);
@@ -62,7 +62,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
     {
         theta = particles.at(i).theta;
 
-        if(std::fabs(yaw_rate) > std::numeric_limits<double>::epsilon() )
+        if(std::fabs(yaw_rate) > 0.001)
         {
             particles.at(i).x += velocity/yaw_rate*(std::sin(theta + yaw_rate*delta_t) - std::sin(theta));
             particles.at(i).y += velocity/yaw_rate*(std::cos(theta) - std::cos(theta + yaw_rate*delta_t));
@@ -70,8 +70,8 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
         }
         else
         {
-            particles.at(i).x += velocity*std::sin(theta);
-            particles.at(i).y += velocity*std::cos(theta);
+            particles.at(i).x += velocity*std::sin(theta)*delta_t;
+            particles.at(i).y += velocity*std::cos(theta)*delta_t;
         }
 
         particles.at(i).x += gauss_x(gen);
@@ -147,7 +147,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
             predictedObs.id = map_landmarks.landmark_list.at(j).id_i;
             if (sensor_range >= std::hypot(predictedObs.x - x, predictedObs.y - y))
             {
-                std::cout << "Pushed the " << j << "th object " << std::endl;
                 predictedLandmarks.push_back(predictedObs);
 
             }
@@ -172,7 +171,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
                     exponent = pow(f.x - e.x, 2)/(2*pow(std_landmark[0], 2)) 
                              + pow(f.y - e.y, 2)/(2*pow(std_landmark[1], 2));
                     particles.at(i).weight *= gauss_norm*std::exp(-exponent); 
-                    std::cout << "Found a match " << particles.at(i).weight << std::endl;
                     particles.at(i).associations.push_back(f.id);
                     particles.at(i).sense_x.push_back(e.x);
                     particles.at(i).sense_y.push_back(e.y);
@@ -185,7 +183,10 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
     for(std::size_t i = 0; i < particles.size(); ++i)
     {
-        particles.at(i).weight /= weight_sum;
+        if(weight_sum > std::numeric_limits<double>::epsilon())
+        {
+            particles.at(i).weight /= weight_sum;
+        }
         weights.at(i) = particles.at(i).weight;
     }
 }

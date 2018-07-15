@@ -93,8 +93,8 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
         min_dist = std::numeric_limits<double>::max();
         for(std::size_t j = 0; j < predicted.size(); ++j)
         {
-            dist = std::hypot( observations.at(i).x - predicted.at(i).x,
-                               observations.at(i).y - predicted.at(i).y);
+            dist = std::hypot( observations.at(i).x - predicted.at(j).x,
+                               observations.at(i).y - predicted.at(j).y);
             if(dist < min_dist)
             {
                 min_dist = dist;
@@ -145,6 +145,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
             predictedObs.id = map_landmarks.landmark_list.at(j).id_i;
             if (sensor_range >= std::hypot(predictedObs.x - x, predictedObs.y - y))
             {
+                std::cout << "Pushed the " << j << "th object " << std::endl;
                 predictedLandmarks.push_back(predictedObs);
 
             }
@@ -164,6 +165,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
                     exponent = pow(f.x - e.x, 2)/(2*pow(std_landmark[0], 2)) 
                              + pow(f.y - e.y, 2)/(2*pow(std_landmark[1], 2));
                     particles.at(i).weight *= gauss_norm*std::exp(-exponent); 
+                    std::cout << "Found a match " << particles.at(i).weight << std::endl;
                     weight_sum += particles.at(i).weight;
                     particles.at(i).associations.push_back(f.id);
                     particles.at(i).sense_x.push_back(e.x);
@@ -175,7 +177,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
     }
 
-    for(std::size_t i = 0; i < weights.size(); ++i)
+    for(std::size_t i = 0; i < particles.size(); ++i)
     {
         particles.at(i).weight /= weight_sum;
         weights.at(i) = particles.at(i).weight;

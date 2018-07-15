@@ -26,6 +26,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
     default_random_engine gen;
 
+    num_particles = 10;
     normal_distribution<double> dist_x(x, std[0]);
     normal_distribution<double> dist_y(y, std[1]);
     normal_distribution<double> dist_theta(theta, std[2]);
@@ -164,9 +165,13 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
                              + pow(f.y - e.y, 2)/(2*pow(std_landmark[1], 2));
                     particles.at(i).weight *= gauss_norm*std::exp(-exponent); 
                     weight_sum += particles.at(i).weight;
+                    particles.at(i).associations.push_back(f.id);
+                    particles.at(i).sense_x.push_back(e.x);
+                    particles.at(i).sense_y.push_back(e.y);
                 }
             }
         }
+        
 
     }
 

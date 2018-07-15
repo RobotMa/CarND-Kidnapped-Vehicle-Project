@@ -32,11 +32,14 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 
     for(int i = 0; i < num_particles; ++i)
     {
-        particles.at(i).id = i;
-        particles.at(i).x = dist_x(gen);
-        particles.at(i).y = dist_y(gen);
-        particles.at(i).theta = dist_theta(gen);
-        particles.at(i).weight = 1.0;
+        Particle particle;
+        particle.id = i;
+        particle.x = dist_x(gen);
+        particle.y = dist_y(gen);
+        particle.theta = dist_theta(gen);
+        particle.weight = 1.0;
+        particles.push_back(particle);
+        weights.push_back(particle.weight);
     }
 
     is_initialized = true;
@@ -53,11 +56,9 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
     normal_distribution<double> gauss_y(0.0, std_pos[1]);
     normal_distribution<double> gauss_theta(0.0, std_pos[2]);
 
-    double x, y, theta;
+    double theta;
     for(int i = 0; i < num_particles; ++i)
     {
-        x = particles.at(i).x;
-        y = particles.at(i).y;
         theta = particles.at(i).theta;
 
         if(std::fabs(yaw_rate) > std::numeric_limits<double>::epsilon() )
@@ -84,6 +85,23 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	//   observed measurement to this particular landmark.
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
+    double min_dist;
+    double dist;
+    for(std::size_t i = 0; i < observations.size(); ++i)
+    {
+        min_dist = std::numeric_limits<double>::max();
+        for(std::size_t j = 0; j < predicted.size(); ++j)
+        {
+            dist = std::hypot( observations.at(i).x - predicted.at(i).x,
+                               observations.at(i).y - predicted.at(i).y);
+            if(dist < min_dist)
+            {
+                min_dist = dist;
+                observations.at(i).id = predicted.at(j).id;
+            }
+        }
+
+    }
 
 }
 
@@ -99,6 +117,64 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation 
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
+    
+    double x, y, theta;
+    double weight_sum = 0.0;
+    for(std::size_t i = 0; i < particles.size(); ++i)
+    {
+        theta = particles.at(i).theta;
+        x = particles.at(i).x;
+        y = particles.at(i).y;
+        std::vector<LandmarkObs> observationsTransformed;
+        LandmarkObs LOTransformed;
+
+        for(std::size_t j =0; j < observations.size(); ++j)
+        {
+            LOTransformed.x = x + std::cos(theta)*observations.at(j).x - std::sin(theta)*observations.at(j).y;
+            LOTransformed.y = y + std::sin(theta)*observations.at(j).x + std::cos(theta)*observations.at(j).y;
+            observationsTransformed.push_back(LOTransformed);
+        }
+
+        std::vector<LandmarkObs> predictedLandmarks;
+        LandmarkObs predictedObs;
+        for(std::size_t j = 0; j < map_landmarks.landmark_list.size(); ++j)
+        {
+            predictedObs.x = map_landmarks.landmark_list.at(j).x_f;
+            predictedObs.y = map_landmarks.landmark_list.at(j).y_f;
+            predictedObs.id = map_landmarks.landmark_list.at(j).id_i;
+            if (sensor_range >= std::hypot(predictedObs.x - x, predictedObs.y - y))
+            {
+                predictedLandmarks.push_back(predictedObs);
+
+            }
+        }
+
+        dataAssociation(predictedLandmarks, observationsTransformed);
+
+        particles.at(i).weight = 1.0;
+        double gauss_norm = 1/(2*M_PI*std_landmark[0]*std_landmark[1]);
+        double exponent;
+        for(const auto& e : predictedLandmarks)
+        {
+            for(const auto& f : observationsTransformed)
+            {
+                if(f.id == e.id)
+                {
+                    exponent = pow(f.x - e.x, 2)/(2*pow(std_landmark[0], 2)) 
+                             + pow(f.y - e.y, 2)/(2*pow(std_landmark[1], 2));
+                    particles.at(i).weight *= gauss_norm*std::exp(-exponent); 
+                    weight_sum += particles.at(i).weight;
+                }
+            }
+        }
+
+    }
+
+    for(std::size_t i = 0; i < weights.size(); ++i)
+    {
+        particles.at(i).weight /= weight_sum;
+        weights.at(i) = particles.at(i).weight;
+    }
 }
 
 void ParticleFilter::resample() {

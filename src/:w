@@ -124,7 +124,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     double weight_sum = 0.0;
     for(std::size_t i = 0; i < particles.size(); ++i)
     {
-        std::cout << " +++++ processing the " << i << "th particle" << std::endl;
         theta = particles.at(i).theta;
         x = particles.at(i).x;
         y = particles.at(i).y;
@@ -179,8 +178,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
                 }
             }
         }
-
+        
         weight_sum += particles.at(i).weight;
+
     }
 
     for(std::size_t i = 0; i < particles.size(); ++i)
@@ -194,28 +194,6 @@ void ParticleFilter::resample() {
 	// TODO: Resample particles with replacement with probability proportional to their weight. 
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
-
-    default_random_engine gen;
-    std::vector<Particle> newParticles;
-    double beta = 0.0;
-    int index = 0;
-    double maxW = 2.0*(*std::max_element(weights.begin(), weights.end()));
-    std::uniform_real_distribution<double> unif(0, 1);
-
-    for(std::size_t i = 0; i < weights.size(); ++i)
-    {
-        beta += unif(gen)*maxW;
-        while(weights.at(index) < maxW)
-        {
-           maxW -= weights.at(index);
-           index++;
-           index /= num_particles;
-        }
-
-        newParticles.push_back(particles.at(index));
-    }
-
-    particles = newParticles;
 
 }
 

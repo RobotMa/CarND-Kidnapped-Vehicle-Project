@@ -26,7 +26,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
     default_random_engine gen;
 
-    num_particles = 51;
+    num_particles = 100;
     normal_distribution<double> dist_x(x, std[0]);
     normal_distribution<double> dist_y(y, std[1]);
     normal_distribution<double> dist_theta(theta, std[2]);
@@ -66,17 +66,16 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
         {
             particles.at(i).x += velocity/yaw_rate*(std::sin(theta + yaw_rate*delta_t) - std::sin(theta));
             particles.at(i).y += velocity/yaw_rate*(std::cos(theta) - std::cos(theta + yaw_rate*delta_t));
-            particles.at(i).theta += theta + yaw_rate*delta_t;
+            particles.at(i).theta += yaw_rate*delta_t + gauss_theta(gen);
         }
         else
         {
-            particles.at(i).x += velocity*std::sin(theta)*delta_t;
-            particles.at(i).y += velocity*std::cos(theta)*delta_t;
+            particles.at(i).x += velocity*std::cos(theta)*delta_t;
+            particles.at(i).y += velocity*std::sin(theta)*delta_t;
         }
 
         particles.at(i).x += gauss_x(gen);
         particles.at(i).y += gauss_y(gen);
-        particles.at(i).theta += gauss_theta(gen);
     }
 
 }
@@ -170,7 +169,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
                 {
                     exponent = pow(f.x - e.x, 2)/(2*pow(std_landmark[0], 2)) 
                              + pow(f.y - e.y, 2)/(2*pow(std_landmark[1], 2));
-                    particles.at(i).weight *= gauss_norm*std::exp(-exponent); 
+                    particles.at(i).weight *= (gauss_norm*std::exp(-exponent)); 
                     particles.at(i).associations.push_back(f.id);
                     particles.at(i).sense_x.push_back(e.x);
                     particles.at(i).sense_y.push_back(e.y);
@@ -178,6 +177,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
             }
         }
 
+        std::cout << i << "th particle weight is " << particles.at(i).weight << std::endl;
         weight_sum += particles.at(i).weight;
     }
 
@@ -201,16 +201,16 @@ void ParticleFilter::resample() {
     double beta = 0.0;
     int index = 0;
     double maxW = 2.0*(*std::max_element(weights.begin(), weights.end()));
-    std::uniform_real_distribution<double> unif(0, 1);
+    std::uniform_real_distribution<double> unif(0.0, 1.0);
 
     for(std::size_t i = 0; i < weights.size(); ++i)
     {
         beta += unif(gen)*maxW;
-        while(weights.at(index) < maxW)
+        while(weights.at(index) < beta)
         {
-           maxW -= weights.at(index);
+           beta -= weights.at(index);
            index++;
-           index /= num_particles;
+           index %= num_particles;
         }
 
         newParticles.push_back(particles.at(index));
